@@ -26,11 +26,12 @@ types = ("*.fit", "*.fits")  # the tuple of file types
 for files in types:
     for f in glob.glob(os.path.join(dir_path, files)):
         res.append(f)
+        print()
 print("\n" * 2 + "Converting files..." + "\n")
 with alive_bar(len(res)) as bar:
     for i in res:
         # Open the file header for viewing and load the header
-        hdulist = fits.open(i)
+        hdulist = fits.open(i) 
         header = hdulist[0].header
 
         # Print the header keys from the file to the terminal
