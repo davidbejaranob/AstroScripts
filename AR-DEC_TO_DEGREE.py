@@ -36,37 +36,67 @@ with alive_bar(len(res)) as bar:
         # Print the header keys from the file to the terminal
         # print(header.keys)
 
+        """ Make this a function to make it easier to read"""
+
         if "flat" in header["OBJECT"].lower():
+            replacementStr = "f"
+            file_name, file_extension = os.path.splitext(os.path.basename(i))
+            file_name = file_name[:-1] + replacementStr
+            file = file_name + file_extension
+            print(file)
             path = os.path.join(
                 os.path.dirname(i),
                 "Flat",
                 str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
                 str(header["EXPTIME"]),
-                os.path.basename(i),
+                str(header["FILTER"])
+                .replace("vacio", "")
+                .replace(" ", "")
+                .replace("+", ""),
+                file,
             )
         elif "dark" in header["OBJECT"].lower():
+            replacementStr = "d"
+            file_name, file_extension = os.path.splitext(os.path.basename(i))
+            file_name = file_name[:-1] + replacementStr
+            file = file_name + file_extension
+            print(file)
             path = os.path.join(
                 os.path.dirname(i),
                 "Dark",
                 str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
                 str(header["EXPTIME"]),
-                os.path.basename(i),
+                file,
             )
         elif "bias" in header["OBJECT"].lower():
+            replacementStr = "b"
+            file_name, file_extension = os.path.splitext(os.path.basename(i))
+            file_name = file_name[:-1] + replacementStr
+            file = file_name + file_extension
+            print(file)
             path = os.path.join(
                 os.path.dirname(i),
                 "Bias",
                 str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
                 str(header["EXPTIME"]),
-                os.path.basename(i),
+                file,
             )
         else:
+            replacementStr = "o"
+            file_name, file_extension = os.path.splitext(os.path.basename(i))
+            file_name = file_name[:-1] + replacementStr
+            file = file_name + file_extension
+            print(file)
             path = os.path.join(
                 os.path.dirname(i),
                 header["OBJECT"],
                 str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
                 str(header["EXPTIME"]),
-                os.path.basename(i),
+                str(header["FILTER"])
+                .replace("vacio", "")
+                .replace(" ", "")
+                .replace("+", ""),
+                file,
             )
         print(os.path.dirname(path))
         os.makedirs(os.path.dirname(path), exist_ok=True)
