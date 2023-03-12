@@ -9,101 +9,113 @@ import os
 import shutil
 import os
 from pathlib import Path
+from string import digits
 
 os.system("clear")
 
-dir_path = str(
-    input(
-        "\n" * 2
-        + "Enter the URL of the files to convert (default this directory): \n>> "
+
+def file_new_path(i, header):
+    remove_digits = str.maketrans("", "", digits)
+
+    if "flat" in header["OBJECT"].lower():
+        replacementStr, object = (
+            header["FILTER"]
+            .lower()
+            .replace("vacio", "")
+            .replace(" ", "")
+            .replace("+", "")
+            .translate(remove_digits)
+            + "_f",
+            "Flat",
+        )
+    elif "dark" in header["OBJECT"].lower():
+        replacementStr, object = "_d", "Dark"
+    elif "bias" in header["OBJECT"].lower():
+        replacementStr, object = "_b", "Bias"
+    else:
+        replacementStr, object = (
+            header["FILTER"]
+            .lower()
+            .replace("vacio", "")
+            .replace(" ", "")
+            .replace("+", "")
+            .translate(remove_digits)
+            + "_o",
+            header["OBJECT"],
+        )
+
+    file_name, file_extension = os.path.splitext(os.path.basename(i))
+    file_name = file_name[:-1] + replacementStr
+    file = file_name + file_extension
+    path = os.path.join(
+        os.path.dirname(i),
+        object,
+        str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
+        file,
     )
-)
-if dir_path == "":
-    print("aborting...\n")
-    sys.exit()
+    print(os.path.dirname(path))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return path
+
+
+def get_path():
+    dir_path = input("Enter the path to the directory: ")
+    if dir_path == "":
+        print("aborting...\n")
+        sys.exit()
+    return dir_path
+
+
+def objects_menu(keys):
+    print(keys)
+
+    print("Select the object you want to process:")
+    for i in range(len(keys)):
+        print(str(i + 1) + ". " + keys[i])
+    print("0. Exit")
+    choice = input("Enter your choice [0-9]: ")
+    if choice == "":
+        print("aborting...\n")
+        sys.exit()
+    return keys[int(choice) - 1]
+
+
+"""
+for i in range(len(keys)):
+        if "flat" in keys[i].lower():
+            keys[i] = "Flat"
+"""
+
+dir_path = get_path()
 res = []
 types = ("*.fit", "*.fits")  # the tuple of file types
+objects_dictionary = {}
 for files in types:
     for f in glob.glob(os.path.join(dir_path, files)):
+        hdulist = fits.open(f)
+        header = hdulist[0].header
         res.append(f)
-        print()
-print("\n" * 2 + "Converting files..." + "\n")
+        if len(res) == 0:
+            print("No files found")
+            sys.exit()
+        elif header["OBJECT"] not in objects_dictionary:
+            objects_dictionary[header["OBJECT"]] = [f]
+        else:
+            objects_dictionary[header["OBJECT"]].append(f)
+        hdulist.close()
+
+choice = objects_menu(list(objects_dictionary.keys()))
+res = objects_dictionary[choice]
+
 with alive_bar(len(res)) as bar:
     for i in res:
         # Open the file header for viewing and load the header
-        hdulist = fits.open(i) 
+        hdulist = fits.open(i)
         header = hdulist[0].header
 
-        # Print the header keys from the file to the terminal
-        # print(header.keys)
+        path = file_new_path(i, header)
 
-        """ Make this a function to make it easier to read"""
-
-        if "flat" in header["OBJECT"].lower():
-            replacementStr = "f"
-            file_name, file_extension = os.path.splitext(os.path.basename(i))
-            file_name = file_name[:-1] + replacementStr
-            file = file_name + file_extension
-            print(file)
-            path = os.path.join(
-                os.path.dirname(i),
-                "Flat",
-                str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
-                str(header["EXPTIME"]),
-                str(header["FILTER"])
-                .replace("vacio", "")
-                .replace(" ", "")
-                .replace("+", ""),
-                file,
-            )
-        elif "dark" in header["OBJECT"].lower():
-            replacementStr = "d"
-            file_name, file_extension = os.path.splitext(os.path.basename(i))
-            file_name = file_name[:-1] + replacementStr
-            file = file_name + file_extension
-            print(file)
-            path = os.path.join(
-                os.path.dirname(i),
-                "Dark",
-                str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
-                str(header["EXPTIME"]),
-                file,
-            )
-        elif "bias" in header["OBJECT"].lower():
-            replacementStr = "b"
-            file_name, file_extension = os.path.splitext(os.path.basename(i))
-            file_name = file_name[:-1] + replacementStr
-            file = file_name + file_extension
-            print(file)
-            path = os.path.join(
-                os.path.dirname(i),
-                "Bias",
-                str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
-                str(header["EXPTIME"]),
-                file,
-            )
-        else:
-            replacementStr = "o"
-            file_name, file_extension = os.path.splitext(os.path.basename(i))
-            file_name = file_name[:-1] + replacementStr
-            file = file_name + file_extension
-            print(file)
-            path = os.path.join(
-                os.path.dirname(i),
-                header["OBJECT"],
-                str(header["CCDXBIN"]) + "x" + str(header["CCDYBIN"]),
-                str(header["EXPTIME"]),
-                str(header["FILTER"])
-                .replace("vacio", "")
-                .replace(" ", "")
-                .replace("+", ""),
-                file,
-            )
-        print(os.path.dirname(path))
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-
-        # Modify the key called 'RA' and 'DEC' to have a value in degrees
-        try:
+        try:  # Modify the key called 'RA' and 'DEC' to have a value in degrees
             coordinate = SkyCoord(
                 header["RA"] + " " + header["DEC"], unit=(u.hourangle, u.deg)
             )
